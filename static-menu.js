@@ -1,9 +1,16 @@
-(() => {
+const initStaticMenu = () => {
   'use strict';
-  const menu = document.getElementById('staticMenu');
-  const close = document.getElementById('closeStaticMenu');
-  const link = document.getElementById('staticGamesLink');
-  if (!menu || !close || !link) return;
+  let menu = document.getElementById('staticMenu');
+  if (!menu) {
+    menu = document.createElement('aside');
+    menu.id = 'staticMenu';
+    menu.dataset.buildMarker = 'SQ931-WG-7K4F';
+    menu.innerHTML = '<a id="staticGamesLink" target="_blank" rel="noopener noreferrer">More unblocked games by Static</a><button id="closeStaticMenu" type="button" aria-label="Hide menu">×</button>';
+    document.body.appendChild(menu);
+  }
+  const close = menu.querySelector('#closeStaticMenu');
+  const link = menu.querySelector('#staticGamesLink');
+  if (!close || !link) return;
 
   const destination = 'https://sites.google.com/view/staticquasar931/gm3z';
   const params = new URLSearchParams({
@@ -49,7 +56,15 @@
       keySequence = '';
     }
   });
-})();
+};
+
+// Wait until Next has hydrated before adding the menu outside its app root.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initStaticMenu, { once: true });
+} else {
+  initStaticMenu();
+}
+
 
 
 
