@@ -1,4 +1,31 @@
+const disableAds = () => {
+  // This build is intended to run without commercial ad integrations.
+  // Keep the game and Google Street View available, but remove ad SDK hooks
+  // and containers if a cached or embedded script tries to add them.
+  const adScriptPattern = /adsense|adsbygoogle|doubleclick|googlesyndication|gamedistribution|playwire|crazygames|poki/i;
+  const adNodePattern = /gdsdk__advertisement|playwire-ad-slot|topAdFixed|adsbygoogle|advertisement|ad-container/i;
+  const removeAds = (root = document) => {
+    root.querySelectorAll('script[src], iframe, ins, [id], [class]').forEach(node => {
+      const src = node.getAttribute('src') || '';
+      const id = node.id || '';
+      const className = typeof node.className === 'string' ? node.className : '';
+      if (adScriptPattern.test(src) || adNodePattern.test(`${id} ${className}`)) node.remove();
+    });
+  };
+  removeAds();
+  window.adBreak = options => {
+    if (options && typeof options.adBreakDone === 'function') setTimeout(() => options.adBreakDone({}), 0);
+  };
+  window.adConfig = () => {};
+  window.requestGDInterstitial = callback => {
+    if (typeof callback === 'function') setTimeout(callback, 0);
+  };
+  const observer = new MutationObserver(() => removeAds());
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+};
+
 const initStaticMenu = () => {
+  disableAds();
   'use strict';
   let menu = document.getElementById('staticMenu');
   if (!menu) {
