@@ -15,9 +15,22 @@
   params.forEach((value, key) => target.searchParams.set(key, value));
   link.href = target.toString();
 
+  let manuallyHiddenUntil = 0;
+  const isAllowedScreen = () => {
+    const loading = document.querySelector('.loading-overlay--visible');
+    const mainMenu = document.querySelector('.home__content.cshown');
+    return Boolean(loading || mainMenu);
+  };
+  const syncVisibility = () => {
+    menu.hidden = Date.now() < manuallyHiddenUntil || !isAllowedScreen();
+  };
+  new MutationObserver(syncVisibility).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+  syncVisibility();
+
   close.addEventListener('click', () => {
+    manuallyHiddenUntil = Date.now() + 180000;
     menu.hidden = true;
-    window.setTimeout(() => { menu.hidden = false; }, 180000);
+    window.setTimeout(syncVisibility, 180000);
   });
 
   let keySequence = '';
@@ -26,11 +39,14 @@
     if (event.key.length !== 1) return;
     keySequence = (keySequence + event.key.toLowerCase()).slice(-3);
     if (keySequence === 'yui') {
-      menu.hidden = !menu.hidden;
+      manuallyHiddenUntil = menu.hidden ? 0 : Date.now() + 86400000;
+      syncVisibility();
       keySequence = '';
     }
   });
 })();
+
+
 
 
 
