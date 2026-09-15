@@ -4,6 +4,15 @@ const disableAds = () => {
   // and containers if a cached or embedded script tries to add them.
   const adScriptPattern = /adsense|adsbygoogle|doubleclick|googlesyndication|gamedistribution|playwire|crazygames|poki/i;
   const adNodePattern = /gdsdk__advertisement|playwire-ad-slot|topAdFixed|adsbygoogle|advertisement|ad-container/i;
+  const isBlockedAdScript = node => node && node.tagName === 'SCRIPT' && adScriptPattern.test(node.src || node.getAttribute?.('src') || '');
+  const originalAppendChild = Node.prototype.appendChild;
+  const originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.appendChild = function (node) {
+    return isBlockedAdScript(node) ? node : originalAppendChild.call(this, node);
+  };
+  Node.prototype.insertBefore = function (node, reference) {
+    return isBlockedAdScript(node) ? node : originalInsertBefore.call(this, node, reference);
+  };
   const removeAds = (root = document) => {
     root.querySelectorAll('script[src], iframe, ins, [id], [class]').forEach(node => {
       const src = node.getAttribute('src') || '';
@@ -27,6 +36,54 @@ const disableAds = () => {
 const initStaticMenu = () => {
   disableAds();
   'use strict';
+  const installSettingsFallback = () => {
+    const openSettings = () => {
+      let panel = document.getElementById('staticSettingsFallback');
+      if (!panel) {
+        panel = document.createElement('section');
+        panel.id = 'staticSettingsFallback';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+        panel.setAttribute('aria-labelledby', 'staticSettingsTitle');
+        panel.innerHTML = '<div class="static-settings-card"><div class="static-settings-head"><h2 id="staticSettingsTitle">Settings</h2><button type="button" id="staticSettingsClose" aria-label="Close settings">×</button></div><label for="staticMusicVolume">Music volume <output id="staticMusicValue"></output></label><input id="staticMusicVolume" type="range" min="0" max="100" step="1"><label for="staticSfxVolume">Sound effects <output id="staticSfxValue"></output></label><input id="staticSfxVolume" type="range" min="0" max="100" step="1"><p class="static-settings-note">Your settings are saved on this device.</p></div>';
+        document.body.appendChild(panel);
+        const read = (key, fallback) => {
+          const value = Number.parseFloat(localStorage.getItem(key));
+          return Number.isFinite(value) ? Math.round(value * 100) : fallback;
+        };
+        const bind = (id, outputId, key) => {
+          const input = panel.querySelector(`#${id}`);
+          const output = panel.querySelector(`#${outputId}`);
+          const update = () => {
+            const percent = Number(input.value);
+            output.value = `${percent}%`;
+            localStorage.setItem(key, String(percent / 100));
+            window.dispatchEvent(new CustomEvent('worldguessr-volume-change', { detail: { key, value: percent / 100 } }));
+          };
+          input.value = String(read(key, 50));
+          input.addEventListener('input', update);
+          update();
+        };
+        bind('staticMusicVolume', 'staticMusicValue', 'musicVolume');
+        bind('staticSfxVolume', 'staticSfxValue', 'sfxVolume');
+        panel.querySelector('#staticSettingsClose').addEventListener('click', () => { panel.hidden = true; });
+        panel.addEventListener('click', event => { if (event.target === panel) panel.hidden = true; });
+      }
+      panel.hidden = false;
+      panel.querySelector('#staticSettingsClose')?.focus();
+    };
+    document.addEventListener('click', event => {
+      const settingsButton = event.target.closest?.('button[aria-label="Settings"]');
+      if (!settingsButton) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openSettings();
+    }, true);
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') document.getElementById('staticSettingsFallback')?.setAttribute('hidden', '');
+    });
+  };
+  installSettingsFallback();
   let menu = document.getElementById('staticMenu');
   if (!menu) {
     menu = document.createElement('aside');
