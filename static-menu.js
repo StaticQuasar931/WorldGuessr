@@ -19,7 +19,8 @@
   const isAllowedScreen = () => {
     const loading = document.querySelector('.loading-overlay--visible');
     const mainMenu = document.querySelector('.home__content.cshown');
-    return Boolean(loading || mainMenu);
+    const activeGame = document.querySelector('.gameUI:not(.hidden)');
+    return !activeGame && Boolean(loading || mainMenu);
   };
   const syncVisibility = () => {
     menu.hidden = Date.now() < manuallyHiddenUntil || !isAllowedScreen();
@@ -27,11 +28,15 @@
   new MutationObserver(syncVisibility).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
   syncVisibility();
 
-  close.addEventListener('click', () => {
+  const hideTemporarily = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     manuallyHiddenUntil = Date.now() + 180000;
     menu.hidden = true;
     window.setTimeout(syncVisibility, 180000);
-  });
+  };
+  close.addEventListener('pointerdown', hideTemporarily);
+  close.addEventListener('click', hideTemporarily);
 
   let keySequence = '';
   // Type Y, U, I to toggle the static menu without adding another control.
